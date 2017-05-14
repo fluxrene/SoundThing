@@ -1,5 +1,10 @@
 package me.soundthing.soundthing;
 
+import android.content.Context;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
@@ -12,11 +17,18 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
   Thread t;
   int sr = 44100;
+  double freq = 440.f;
   boolean isRunning = true;
+
+  long millis = System.currentTimeMillis();
+
+  private SensorManager mSensorManager;
+  private Sensor mSensor;
+
 
 
   @Override
@@ -26,6 +38,9 @@ public class MainActivity extends AppCompatActivity {
     Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
     setSupportActionBar(toolbar);
 
+    mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+    mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE_UNCALIBRATED);
+    mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_FASTEST);
     FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
     fab.setOnClickListener(new View.OnClickListener() {
       @Override
@@ -61,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
   }
 
   private void makeSomeSound() {
+    System.out.println("FUCK YOU?");
     // start a new thread to synthesise audio
     t = new Thread() {
       public void run() {
@@ -78,7 +94,6 @@ public class MainActivity extends AppCompatActivity {
         short samples[] = new short[buffsize];
         int amp = 10000;
         double twopi = 8. * Math.atan(1.);
-        double fr = 440.f;
         double ph = 0.0;
 
         // start audio
@@ -86,10 +101,9 @@ public class MainActivity extends AppCompatActivity {
 
         // synthesis loop
         while (isRunning) {
-          fr = 2040;
           for (int i = 0; i < buffsize; i++) {
             samples[i] = (short) (amp * Math.sin(ph));
-            ph += twopi * fr / sr;
+            ph += twopi * freq / sr;
           }
           audioTrack.write(samples, 0, buffsize);
         }
@@ -98,5 +112,18 @@ public class MainActivity extends AppCompatActivity {
       }
     };
     t.start();
+  }
+
+  @Override
+  public void onSensorChanged(SensorEvent event) {
+    float x = Math.abs(event.values[0]);
+    freq = 800 + x * 100;
+    System.out.println(System.currentTimeMillis() - millis);
+    millis = System.currentTimeMillis();
+  }
+
+  @Override
+  public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
   }
 }
